@@ -43,10 +43,36 @@ pip3 --version
 
 ### 1. Backend Setup
 
-Navigate to the backend directory and install dependencies:
+Navigate to the backend directory:
 
 ```bash
 cd backend
+```
+
+#### Create Virtual Environment
+
+Create a Python virtual environment to isolate dependencies:
+
+```bash
+# Create virtual environment
+python3 -m venv .venv
+
+# Activate virtual environment
+# On macOS/Linux:
+source .venv/bin/activate
+
+# On Windows (Command Prompt):
+.venv\Scripts\activate
+
+# On Windows (PowerShell):
+.venv\Scripts\Activate.ps1
+```
+
+#### Install Dependencies
+
+Once the virtual environment is activated (you should see `(.venv)` in your terminal prompt):
+
+```bash
 pip install -r requirements.txt
 ```
 
@@ -54,6 +80,8 @@ pip install -r requirements.txt
 - `fastapi` - Web framework
 - `uvicorn` - ASGI server
 - `pydantic` - Data validation
+
+**Note:** Always ensure the virtual environment is activated before running the backend or installing packages.
 
 ### 2. Frontend Setup
 
@@ -71,7 +99,20 @@ You'll need to run both the backend and frontend servers simultaneously. Open tw
 ### Terminal 1: Start the Backend Server
 
 ```bash
+# Navigate to backend directory
 cd backend
+
+# Activate virtual environment
+# On macOS/Linux:
+source .venv/bin/activate
+
+# On Windows (Command Prompt):
+# .venv\Scripts\activate
+
+# On Windows (PowerShell):
+# .venv\Scripts\Activate.ps1
+
+# Start the FastAPI server
 python3 -m uvicorn main:app --reload --port 8000
 ```
 
@@ -103,6 +144,22 @@ You should now see the drone navigation interface with the 3D visualization.
 ## Development Commands
 
 ### Backend
+
+First, activate the virtual environment (from the backend directory):
+
+```bash
+# On macOS/Linux:
+source .venv/bin/activate
+
+# On Windows (Command Prompt):
+# .venv\Scripts\activate
+
+# On Windows (PowerShell):
+# .venv\Scripts\Activate.ps1
+```
+
+Then run any of these commands:
+
 ```bash
 # Run with auto-reload (for development)
 python3 -m uvicorn main:app --reload --port 8000
@@ -112,6 +169,9 @@ python3 test_api.py
 
 # Run without auto-reload (for production)
 python3 -m uvicorn main:app --port 8000
+
+# Deactivate virtual environment (when done)
+deactivate
 ```
 
 ### Frontend
