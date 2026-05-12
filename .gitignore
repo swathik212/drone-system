@@ -48,3 +48,6 @@ package-lock.json
 # Build output
 dist/
 build/
+
+# Documentation (keep locally only)
+docs/
