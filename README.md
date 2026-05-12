@@ -73,7 +73,7 @@ source .venv/bin/activate
 Once the virtual environment is activated (you should see `(.venv)` in your terminal prompt):
 
 ```bash
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 **Dependencies:**
