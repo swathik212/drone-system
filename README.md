@@ -239,21 +239,170 @@ The backend is configured to allow all origins. If you still see CORS errors:
 
 ### Pathfind Endpoint
 
+**`POST /pathfind`**
+
+#### Request Body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `bounds` | `[int, int, int]` | Grid size as `[max_x, max_y, max_z]` |
+| `start` | `{x, y, z}` | Drone start coordinate |
+| `goal` | `{x, y, z}` | Drone goal coordinate |
+| `obstacles` | `[{x, y, z}, ...]` | List of blocked cells (buildings) |
+| `no_fly_zones` | `[{x, y, z}, ...]` | List of restricted airspace cells |
+| `algorithm` | `string` | One of: `ucs`, `astar_manhattan`, `astar_euclidean`, `astar_building`, `idastar`, `weighted_astar` |
+
+#### Movement Cost Model
+
+| Direction | Cost |
+|-----------|------|
+| Horizontal (±x, ±y) | 1 |
+| Downward (−z) | 1 |
+| Upward (+z) | **2** |
+
+---
+
+#### Example 1 — Simple open grid, A* Manhattan
+
 **Request:**
 ```bash
 curl -X POST http://localhost:8000/pathfind \
   -H "Content-Type: application/json" \
   -d '{
-    "bounds": {"x": 100, "y": 100, "z": 100},
+    "bounds": [10, 10, 5],
     "start": {"x": 0, "y": 0, "z": 0},
-    "goal": {"x": 100, "y": 100, "z": 100},
+    "goal": {"x": 5, "y": 5, "z": 2},
     "obstacles": [],
     "no_fly_zones": [],
-    "algorithm": "a_star"
+    "algorithm": "astar_manhattan"
   }'
 ```
 
-For detailed API documentation, visit:
+**Response:**
+```json
+{
+  "path": [
+    {"x": 0, "y": 0, "z": 0},
+    {"x": 1, "y": 0, "z": 0},
+    {"x": 2, "y": 0, "z": 0},
+    {"x": 3, "y": 0, "z": 0},
+    {"x": 4, "y": 0, "z": 0},
+    {"x": 5, "y": 0, "z": 0},
+    {"x": 5, "y": 1, "z": 0},
+    {"x": 5, "y": 2, "z": 0},
+    {"x": 5, "y": 3, "z": 0},
+    {"x": 5, "y": 4, "z": 0},
+    {"x": 5, "y": 5, "z": 0},
+    {"x": 5, "y": 5, "z": 1},
+    {"x": 5, "y": 5, "z": 2}
+  ],
+  "cost": 14,
+  "nodes_expanded": 119,
+  "runtime": 0.0012
+}
+```
+
+---
+
+#### Example 2 — Building obstacle + no-fly zone, Weighted A*
+
+**Request:**
+```bash
+curl -X POST http://localhost:8000/pathfind \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bounds": [10, 10, 10],
+    "start": {"x": 0, "y": 0, "z": 0},
+    "goal": {"x": 9, "y": 9, "z": 9},
+    "obstacles": [
+      {"x": 5, "y": 5, "z": 0},
+      {"x": 5, "y": 5, "z": 1},
+      {"x": 5, "y": 5, "z": 2},
+      {"x": 5, "y": 5, "z": 3},
+      {"x": 5, "y": 5, "z": 4},
+      {"x": 5, "y": 5, "z": 5}
+    ],
+    "no_fly_zones": [
+      {"x": 3, "y": 3, "z": 0},
+      {"x": 3, "y": 3, "z": 1},
+      {"x": 3, "y": 3, "z": 2}
+    ],
+    "algorithm": "weighted_astar"
+  }'
+```
+
+**Response:**
+```json
+{
+  "path": [
+    {"x": 0, "y": 0, "z": 0},
+    "...",
+    {"x": 9, "y": 9, "z": 9}
+  ],
+  "cost": 28,
+  "nodes_expanded": 36,
+  "runtime": 0.00048
+}
+```
+
+---
+
+#### Example 3 — No path exists (blocked environment)
+
+**Request:**
+```bash
+curl -X POST http://localhost:8000/pathfind \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bounds": [4, 4, 4],
+    "start": {"x": 0, "y": 0, "z": 0},
+    "goal": {"x": 4, "y": 4, "z": 4},
+    "obstacles": [
+      {"x": 2, "y": 0, "z": 0}, {"x": 2, "y": 1, "z": 0},
+      {"x": 2, "y": 2, "z": 0}, {"x": 2, "y": 3, "z": 0},
+      {"x": 2, "y": 4, "z": 0}, {"x": 2, "y": 0, "z": 1},
+      {"x": 2, "y": 1, "z": 1}, {"x": 2, "y": 2, "z": 1},
+      {"x": 2, "y": 3, "z": 1}, {"x": 2, "y": 4, "z": 1},
+      {"x": 2, "y": 0, "z": 2}, {"x": 2, "y": 1, "z": 2},
+      {"x": 2, "y": 2, "z": 2}, {"x": 2, "y": 3, "z": 2},
+      {"x": 2, "y": 4, "z": 2}, {"x": 2, "y": 0, "z": 3},
+      {"x": 2, "y": 1, "z": 3}, {"x": 2, "y": 2, "z": 3},
+      {"x": 2, "y": 3, "z": 3}, {"x": 2, "y": 4, "z": 3},
+      {"x": 2, "y": 0, "z": 4}, {"x": 2, "y": 1, "z": 4},
+      {"x": 2, "y": 2, "z": 4}, {"x": 2, "y": 3, "z": 4},
+      {"x": 2, "y": 4, "z": 4}
+    ],
+    "no_fly_zones": [],
+    "algorithm": "astar_manhattan"
+  }'
+```
+
+**Response:**
+```json
+{
+  "path": [],
+  "cost": -1,
+  "nodes_expanded": 42,
+  "runtime": 0.0004
+}
+```
+
+> A `cost` of `-1` and an empty `path` means no route exists between start and goal.
+
+---
+
+#### Available Algorithms
+
+| Value | Algorithm | Optimal? | Notes |
+|-------|-----------|----------|-------|
+| `ucs` | Uniform Cost Search | Yes | Uninformed baseline, most nodes expanded |
+| `astar_manhattan` | A* Manhattan | Yes | Best admissible heuristic in this environment |
+| `astar_euclidean` | A* Euclidean | Yes | Slightly more expansions than Manhattan |
+| `astar_building` | A* Building-Aware | No* | Experimental; heuristic can overestimate |
+| `idastar` | IDA* | Yes | Memory-efficient; slow on large 3D grids |
+| `weighted_astar` | Weighted A* (w=1.5) | Bounded | Up to 1.5× optimal; 95–98% fewer nodes than UCS |
+
+For interactive API documentation, visit:
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
 
