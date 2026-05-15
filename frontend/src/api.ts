@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: 'http://localhost:8000',
+  timeout: 30000, // 30 s — prevents UI hanging on slow algorithms like IDA*
 });
 
 export type Coordinate = { x: number, y: number, z: number };

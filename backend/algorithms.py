@@ -1,4 +1,5 @@
 import math
+import sys
 import time
 import heapq
 from typing import List, Tuple, Dict, Set
@@ -198,17 +199,30 @@ def bidirectional_astar(env: Environment):
         "runtime": runtime
     }
 
+# Maximum node expansions before IDA* gives up (prevents infinite hangs on large grids)
+_IDA_STAR_NODE_LIMIT = 100_000
+
 def ida_star(env: Environment):
     """
     IDA* (Iterative Deepening A*): depth-first search with an f-cost threshold
     that iteratively increases. Memory-efficient: O(depth) space.
-    Uses Manhattan heuristic.
+    Uses Manhattan heuristic. Aborts if node expansions exceed _IDA_STAR_NODE_LIMIT.
     """
     start_time = time.time()
     nodes_expanded = [0]
+    limit_hit = [False]
     goal_tuple = (env.goal.x, env.goal.y, env.goal.z)
 
+    # Ensure recursion depth is sufficient for the grid size
+    max_depth = env.bounds[0] * env.bounds[1] * env.bounds[2] + 50
+    prev_limit = sys.getrecursionlimit()
+    sys.setrecursionlimit(max(prev_limit, max_depth + 100))
+
     def dfs(path: list, path_set: set, g: float, threshold: float):
+        if nodes_expanded[0] >= _IDA_STAR_NODE_LIMIT:
+            limit_hit[0] = True
+            return float('inf')
+
         current = path[-1]
         f = g + manhattan_heuristic(current, env.goal, env)
 
@@ -247,7 +261,17 @@ def ida_star(env: Environment):
     while threshold != float('inf'):
         result = dfs(path, path_set, 0, threshold)
 
+        if limit_hit[0]:
+            sys.setrecursionlimit(prev_limit)
+            return {
+                "path": [],
+                "cost": -2,  # -2 signals node-limit exceeded (not "no path")
+                "nodes_expanded": nodes_expanded[0],
+                "runtime": time.time() - start_time
+            }
+
         if isinstance(result, tuple) and result[0] == 'FOUND':
+            sys.setrecursionlimit(prev_limit)
             runtime = time.time() - start_time
             return {
                 "path": [{"x": s.x, "y": s.y, "z": s.z} for s in path],
@@ -261,6 +285,7 @@ def ida_star(env: Environment):
 
         threshold = result
 
+    sys.setrecursionlimit(prev_limit)
     return {
         "path": [],
         "cost": -1,
