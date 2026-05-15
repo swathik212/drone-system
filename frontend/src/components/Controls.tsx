@@ -5,6 +5,13 @@ const Controls = ({ bounds, start, goal, obstacles, noFlyZones, setStart, setGoa
   const [algorithm, setAlgorithm] = useState('ucs');
   const [loading, setLoading] = useState(false);
 
+  const setupIdaStarDemo = () => {
+    setStart({ x: 0, y: 0, z: 0 });
+    setGoal({ x: 4, y: 4, z: 4 });
+    setObstacles([{ x: 2, y: 2, z: 0 }, { x: 2, y: 2, z: 1 }, { x: 2, y: 2, z: 2 }]);
+    setNoFlyZones([]);
+  };
+
   const handleSearch = async () => {
     setLoading(true);
     try {
@@ -17,15 +24,23 @@ const Controls = ({ bounds, start, goal, obstacles, noFlyZones, setStart, setGoa
         algorithm
       });
       if (result.path.length === 0) {
-        alert("No path found");
+        if (result.cost === -2) {
+          alert("IDA* hit its node expansion limit on this grid.\n\nClick 'Set IDA* Demo Config' to use a smaller environment that IDA* can handle, or switch to Weighted A* for the same optimal result.");
+        } else {
+          alert("No path found");
+        }
       }
       onPathFound(result.path, {
         cost: result.cost,
         nodes_expanded: result.nodes_expanded,
         runtime: result.runtime
       });
-    } catch (err) {
-      alert("Error finding path");
+    } catch (err: any) {
+      if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+        alert("Request timed out. IDA* can be very slow on complex grids — try Weighted A* for the same result much faster.");
+      } else {
+        alert("Error finding path");
+      }
       console.error(err);
     }
     setLoading(false);
@@ -90,6 +105,26 @@ const Controls = ({ bounds, start, goal, obstacles, noFlyZones, setStart, setGoa
           <option value="idastar">IDA* (Iterative Deepening A*)</option>
           <option value="weighted_astar">Weighted A* (w=1.5)</option>
         </select>
+        {algorithm === 'idastar' && (
+          <div style={{
+            marginTop: '8px', padding: '8px 10px',
+            backgroundColor: '#3a2a00', border: '1px solid #f0a000',
+            borderRadius: '4px', fontSize: '0.8em', color: '#ffd060'
+          }}>
+            ⚠️ IDA* is memory-efficient but slow on large grids.
+            Use a short path (goal ≤ 5 steps away) for best results.
+            <button
+              onClick={setupIdaStarDemo}
+              style={{
+                display: 'block', marginTop: '6px', padding: '4px 8px',
+                backgroundColor: '#f0a000', color: '#000',
+                border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '0.9em'
+              }}
+            >
+              Set IDA* Demo Config
+            </button>
+          </div>
+        )}
       </div>
 
       <div>
